@@ -1,4 +1,4 @@
-$dt = [System.Data.DataTable]::new()
+$dt = New-Object -TypeName System.Data.DataTable
 [void]$dt.Columns.Add('Name', [string])
 [void]$dt.Columns.Add('CPU', [int])
 [void]$dt.Columns.Add('RAM', [int])
