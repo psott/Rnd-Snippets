@@ -10,3 +10,5 @@ $domains |foreach{
         Write-Host "$cn" -ForegroundColor Red
     }
 } | Out-GridView -PassThru
+
+# git test
