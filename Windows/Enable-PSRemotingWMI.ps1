@@ -18,3 +18,8 @@ $IWM_Params = @{
     ArgumentList = $ArgList
     }
 Invoke-WmiMethod @IWM_Params
+
+
+##### OR
+$CN = 'computername'
+([wmiclass]"\\$CN\root\cimv2:Win32_Process").Create('powershell "Enable-PSRemoting -Force"')
