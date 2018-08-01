@@ -7,7 +7,7 @@ $ArgList = @(
     ) -join ' '
 
 $IWM_Params = @{
-    ComputerName = 'V998SPWTV191040'
+    ComputerName = 'xxx'
     Namespace = 'root\cimv2'
     Class = 'Win32_Process'
     Name = 'Create'
