@@ -218,7 +218,9 @@ function Get-UserTokenSize {
     }
 
     [pscustomobject]@{
+      UserNameShort = $UserNameShort
       UserName = $Username
+      OsBuild = $OSBuild
       Domain = $PrincipalsDomain
       TokenSize = $Tokensize
       DelegatedTokenSize = $DelegatedTokenSize
