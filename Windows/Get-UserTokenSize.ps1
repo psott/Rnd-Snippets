@@ -52,7 +52,7 @@ function Get-UserTokenSize {
     $UserIdentity = New-Object System.Security.Principal.WindowsIdentity($Principal) 
     $Groups = $UserIdentity.get_Groups() 
     $DomainSID = $UserIdentity.User.AccountDomainSid 
-    $GroupCount = $Groups.Count 
+    $GroupCount = ($Groups | Measure-Object).Count 
 
     $GroupDetails = @()
 
@@ -80,11 +80,11 @@ function Get-UserTokenSize {
           { 
             $SIDHistGroup = New-Object System.Security.Principal.SecurityIdentifier($GroupSIDHistory) 
             $SIDHistGroupName = $SIDHistGroup.Translate([System.Security.Principal.NTAccount]) 
-            $GroupSIDHISTString = $GroupName + "--> " + $SIDHistGroupName 
 
             $GroupSIDHistoryDetails += [pscustomobject]@{
+              GroupName = $GroupName
+              SIDHistGroupName = $SIDHistGroupName
               GroupSIDHistory = $GroupSIDHistory
-              GroupSIDHISTString = $GroupSIDHISTString
             }
           } 
         }
@@ -97,7 +97,8 @@ function Get-UserTokenSize {
           $SecurityGlobalScope++
 
           $GroupDetails += [pscustomobject]@{
-            GroupName = ($GroupName + " (" + ($GroupSID.ToString()) + ")")
+            GroupName = $GroupName
+            GroupSID = $GroupSID.ToString()
             GroupType = 'Domain Global Group'
           }
         }
@@ -106,7 +107,8 @@ function Get-UserTokenSize {
           $SecurityDomainLocalScope++ 
 
           $GroupDetails += [pscustomobject]@{
-            GroupName = ($GroupName + " (" + ($GroupSID.ToString()) + ")" )
+            GroupName = $GroupName
+            GroupSID = $GroupSID.ToString()
             GroupType = 'Domain Local Group'
           }
         } 
@@ -118,7 +120,8 @@ function Get-UserTokenSize {
             $SecurityUniversalInternalScope++ 
 
             $GroupDetails += [pscustomobject]@{
-              GroupName = $GroupName + " (" + ($GroupSID.ToString()) + ")" 
+              GroupName = $GroupName
+              GroupSID = $GroupSID.ToString() 
               GroupType = 'Local Universal Group'
             }
           } 
@@ -127,7 +130,8 @@ function Get-UserTokenSize {
             $SecurityUniversalExternalScope++ 
 
             $GroupDetails += [pscustomobject]@{
-              GroupName = $GroupName + " (" + ($GroupSID.ToString()) + ")" 
+              GroupName = $GroupName
+              GroupSID = $GroupSID.ToString() 
               GroupType = 'External Universal Group'
             }
           } 
@@ -137,7 +141,7 @@ function Get-UserTokenSize {
     } 
  
     $SIDHistoryResults = Get-SIDHistorySIDs $Principal 
-    $SIDCounter = $SIDHistoryResults.count 
+    $SIDHistoryCounter = ($SIDHistoryResults | Measure-Object).Count
     
     if ($SIDHistoryResults -ne $null) 
     { 
@@ -154,8 +158,8 @@ function Get-UserTokenSize {
       } 
     } 
                          
-    $GroupSidHistoryCounter = $AllGroupSIDHistories.Count  
-    $AllSIDHistories = $SIDCounter  + $GroupSidHistoryCounter 
+    $GroupSidHistoryCounter = ($AllGroupSIDHistories | Measure-Object).Count  
+    $AllSIDHistories = $SIDHistoryCounter  + $GroupSidHistoryCounter 
   
     $TokenSize = 0 
     $TokenSize = 1200 + (40 * ($SecurityDomainLocalScope + $SecurityUniversalExternalScope + $GroupSidHistoryCounter)) + (8 * ($SecurityGlobalScope  + $SecurityUniversalInternalScope)) 
@@ -222,7 +226,7 @@ function Get-UserTokenSize {
       ProblemDetected = $ProblemDetected
       ProblemDetails = $ProblemDetails
       GroupCount = $GroupCount
-      SIDCounter = $SIDCounter
+      SIDHistoryCounter = $SIDHistoryCounter
       GroupSidHistoryCounter = $GroupSidHistoryCounter
       AllSIDHistories = $AllSIDHistories
       SecurityGlobalScope = $SecurityGlobalScope
