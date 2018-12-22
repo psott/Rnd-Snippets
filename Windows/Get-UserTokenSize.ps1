@@ -1,6 +1,9 @@
 function Get-UserTokenSize {
   param (
-    [array]$Principals = ($env:USERNAME), 
+    [Parameter(Mandatory=$true)]
+    [array]$Principals,
+    
+    [Parameter(Mandatory=$true)]
     [ValidateSet(7600,9200,10586)]
     [Int]$OSBuild
   )
@@ -51,7 +54,7 @@ function Get-UserTokenSize {
     $DomainSID = $UserIdentity.User.AccountDomainSid 
     $GroupCount = $Groups.Count 
 
-    $GroupDetails = New-Object PSObject 
+    $GroupDetails = @()
 
     $AllGroupSIDHistories = @() 
     $SecurityGlobalScope  = 0 
@@ -72,13 +75,17 @@ function Get-UserTokenSize {
         #Resolve SIDHistories if possible to give more detail. 
         if ($SIDHistorySids -ne $null) 
         { 
-          $GroupSIDHistoryDetails = New-Object PSObject 
+          $GroupSIDHistoryDetails = @()
           foreach ($GroupSIDHistory in $AllGroupSIDHistories) 
           { 
             $SIDHistGroup = New-Object System.Security.Principal.SecurityIdentifier($GroupSIDHistory) 
             $SIDHistGroupName = $SIDHistGroup.Translate([System.Security.Principal.NTAccount]) 
             $GroupSIDHISTString = $GroupName + "--> " + $SIDHistGroupName 
-            Add-Member -InputObject $GroupSIDHistoryDetails -MemberType NoteProperty -Name $GroupSIDHistory  -Value $GroupSIDHISTString -force 
+
+            $GroupSIDHistoryDetails += [pscustomobject]@{
+              GroupSIDHistory = $GroupSIDHistory
+              GroupSIDHISTString = $GroupSIDHISTString
+            }
           } 
         }
       } 
@@ -87,18 +94,21 @@ function Get-UserTokenSize {
       switch -exact ($GroupType) {
         "-2147483646" { 
           #Domain Global scope 
-          $SecurityGlobalScope++ 
-            #Domain Global scope 
-            $GroupNameString = $GroupName + " (" + ($GroupSID.ToString()) + ")" 
-            Add-Member -InputObject $GroupDetails -MemberType NoteProperty -Name $GroupNameString  -Value "Domain Global Group" 
-            $GroupNameString = $null 
+          $SecurityGlobalScope++
+
+          $GroupDetails += [pscustomobject]@{
+            GroupName = ($GroupName + " (" + ($GroupSID.ToString()) + ")")
+            GroupType = 'Domain Global Group'
+          }
         }
         "-2147483644" { 
           #Domain Local scope 
           $SecurityDomainLocalScope++ 
-            $GroupNameString = $GroupName + " (" + ($GroupSID.ToString()) + ")" 
-            Add-Member -InputObject $GroupDetails -MemberType NoteProperty -Name $GroupNameString  -Value "Domain Local Group" 
-            $GroupNameString = $null 
+
+          $GroupDetails += [pscustomobject]@{
+            GroupName = ($GroupName + " (" + ($GroupSID.ToString()) + ")" )
+            GroupType = 'Domain Local Group'
+          }
         } 
         "-2147483640" { 
           #Universal scope; must separate local 
@@ -106,16 +116,20 @@ function Get-UserTokenSize {
           if ($GroupSid -match $DomainSID) 
           { 
             $SecurityUniversalInternalScope++ 
-              $GroupNameString = $GroupName + " (" + ($GroupSID.ToString()) + ")" 
-              Add-Member -InputObject $GroupDetails -MemberType NoteProperty -Name  $GroupNameString -Value "Local Universal Group" 
-              $GroupNameString = $null 
+
+            $GroupDetails += [pscustomobject]@{
+              GroupName = $GroupName + " (" + ($GroupSID.ToString()) + ")" 
+              GroupType = 'Local Universal Group'
+            }
           } 
           else 
           { 
             $SecurityUniversalExternalScope++ 
-              $GroupNameString =  $GroupName + " (" + ($GroupSID.ToString()) + ")" 
-              Add-Member -InputObject $GroupDetails -MemberType NoteProperty -Name  $GroupNameString -Value "External Universal Group" 
-              $GroupNameString = $null 
+
+            $GroupDetails += [pscustomobject]@{
+              GroupName = $GroupName + " (" + ($GroupSID.ToString()) + ")" 
+              GroupType = 'External Universal Group'
+            }
           } 
         } 
       } 
@@ -127,12 +141,16 @@ function Get-UserTokenSize {
     
     if ($SIDHistoryResults -ne $null) 
     { 
-      $UserSIDHistoryDetails = New-Object PSObject 
+      $UserSIDHistoryDetails = @()
       foreach ($SIDHistory in $SIDHistoryResults) 
       { 
         $SIDHist = New-Object System.Security.Principal.SecurityIdentifier($SIDHistory) 
         $SIDHistName = $SIDHist.Translate([System.Security.Principal.NTAccount]) 
-        Add-Member -InputObject $UserSIDHistoryDetails -MemberType NoteProperty -Name $SIDHistName  -Value $SIDHistory -force 
+
+        $UserSIDHistoryDetails += [pscustomobject]@{
+          SIDHistName = $SIDHistName
+          SIDHistory = $SIDHistory
+        }
       } 
     } 
                          
@@ -144,7 +162,21 @@ function Get-UserTokenSize {
     $DelegatedTokenSize = 2 * (1200 + (40 * ($SecurityDomainLocalScope + $SecurityUniversalExternalScope + $GroupSidHistoryCounter)) + (8 * ($SecurityGlobalScope  + $SecurityUniversalInternalScope)))      
 
     $Username = $UserIdentity.name 
+    $UserNameShort = $Username.Split('\')[1]
+    
+    
+    
     $PrincipalsDomain = $Username.Split('\')[0] 
+
+    if(!(Test-Path -Path "$ExportPath\GroupDetails\$PrincipalsDomain")){
+      New-Item -Name $PrincipalsDomain -Path "$ExportPath\GroupDetails" -ItemType Directory
+    }
+    if(!(Test-Path -Path "$ExportPath\GroupSIDHistoryDetails\$PrincipalsDomain")){
+      New-Item -Name $PrincipalsDomain -Path "$ExportPath\GroupSIDHistoryDetails" -ItemType Directory
+    }
+    if(!(Test-Path -Path "$ExportPath\UserSIDHistoryDetails\$PrincipalsDomain")){
+      New-Item -Name $PrincipalsDomain -Path "$ExportPath\UserSIDHistoryDetails" -ItemType Directory
+    }
 
     $KerbKey = Get-Item -Path Registry::HKLM\SYSTEM\CurrentControlSet\Control\LSA\Kerberos\Parameters 
     $MaxTokenSizeValue = $KerbKey.GetValue('MaxTokenSize') 
@@ -170,12 +202,16 @@ function Get-UserTokenSize {
       $ProblemDetected = $true
       $ProblemDetails = "WARNING: The token was large enough that it may have problems when being used for Kerberos delegation or for access to Active Directory domain controller services. Alter the maximum size per KB http://support.microsoft.com/kb/327825 and consider reducing direct and transitive group memberships."
     } 
- 
-    $GroupDetails | Export-Csv -Path "$ExportPath\GroupDetails\$UserName.csv" -UseCulture -NoTypeInformation -Encoding UTF8
     
-    $GroupSIDHistoryDetails | Export-Csv -Path "$ExportPath\GroupSIDHistoryDetails\$UserName.csv" -UseCulture -NoTypeInformation -Encoding UTF8
-
-    $UserSIDHistoryDetails | Export-Csv -Path "$ExportPath\UserSIDHistoryDetails\$UserName.csv" -UseCulture -NoTypeInformation -Encoding UTF8
+    if($GroupDetails -ne $null){
+      $GroupDetails | Export-Csv -Path "$ExportPath\GroupDetails\$PrincipalsDomain\$UserNameShort.csv" -UseCulture -NoTypeInformation -Encoding UTF8
+    }
+    if($GroupSIDHistoryDetails -ne $null){
+      $GroupSIDHistoryDetails | Export-Csv -Path "$ExportPath\GroupSIDHistoryDetails\$PrincipalsDomain\$UserNameShort.csv" -UseCulture -NoTypeInformation -Encoding UTF8
+    }
+    if($UserSIDHistoryDetails -ne $null){
+      $UserSIDHistoryDetails | Export-Csv -Path "$ExportPath\UserSIDHistoryDetails\$PrincipalsDomain\$UserNameShort.csv" -UseCulture -NoTypeInformation -Encoding UTF8
+    }
 
     [pscustomobject]@{
       UserName = $Username
@@ -196,5 +232,3 @@ function Get-UserTokenSize {
     } | Export-Csv -Path "$ExportPath\UserTokenSize.csv" -UseCulture -NoTypeInformation -Encoding UTF8 -Append
   }
 }
-
- Get-UserTokenSize -Principals j22345 -OSBuild 10586
