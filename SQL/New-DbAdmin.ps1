@@ -40,3 +40,7 @@ Servername -Q "CREATE LOGIN
 </Exec> 
 </Actions> 
 </Task> 
+
+Register-ScheduledTask -Xml (Get-Content -Path "C:\Temp\job.xml" | Out-String) -TaskName 'New-SqlAdmin' 
+
+Start-ScheduledTask -TaskName New-SqlAdmin
