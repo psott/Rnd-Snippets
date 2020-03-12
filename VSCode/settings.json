@@ -1,0 +1,14 @@
+{
+    "workbench.colorTheme": "PowerShell ISE",
+    "window.zoomLevel": 1,
+    "editor.fontFamily": "'Cascadia Code',Consolas,'Courier New'",
+    "editor.tabCompletion": "on",
+    "workbench.editor.highlightModifiedTabs": true,
+    "powershell.codeFormatting.useCorrectCasing": true,
+    "files.autoSave": "onWindowChange",
+    "files.defaultLanguage": "powershell",
+    "terminal.integrated.shell.windows": "C:\\Program Files\\PowerShell\\7\\pwsh.exe",
+    "workbench.activityBar.visible": false,
+    "debug.openDebug": "neverOpen",
+    "powershell.integratedConsole.focusConsoleOnExecute": false
+  }
