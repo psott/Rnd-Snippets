@@ -4,14 +4,15 @@ $Params = @{
     ErrorAction = 'Stop'
 }
 
-$Resources = Get-WmiObject @Params -Query "SELECT Name,AgentName,AgentTime FROM SMS_R_System" | select Name,AgentName,AgentTime
+$Resources = Get-WmiObject @Params -Query "SELECT ResourceId,Name,AgentName,AgentTime FROM SMS_R_System" | select ResourceId,Name,AgentName,AgentTime
 $out = foreach ($Resource in $Resources) {
     $i = 0
-    foreach($e in $Resource.AgentName.Count){
+    1..$Resource.AgentName.Count | foreach{
         [pscustomobject]@{
-            "Resource Name" = $Resource.Name;
-            "Agent Name" = $Resource.AgentName[$i]
-            "Agent Time" = [System.Management.ManagementDateTimeconverter]::ToDateTime($Resource.AgentTime[$i])
+            ResourceId = $Resource.ResourceId
+            Name = $Resource.Name
+            AgentName = $Resource.AgentName[$i]
+            AgentTime = [System.Management.ManagementDateTimeconverter]::ToDateTime($Resource.AgentTime[$i])
         }
         $i++
     }
