@@ -27,5 +27,6 @@ gwmi -ComputerName $SiteServer -Namespace $NS -Query $query | foreach{
     [pscustomobject]@{
         Name = $_.SMS_R_SYSTEM.Name
         FreeSpace = $_.SMS_G_System_LOGICAL_DISK.FreeSpace
+        FreeSpaceGB = [math]::Round(("$($_.SMS_G_System_LOGICAL_DISK.FreeSpace)" + [string]'000000')/1GB ,2)
     }
 } | ogv -PassThru
